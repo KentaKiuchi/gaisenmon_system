@@ -1,0 +1,22 @@
+{
+  "name": "凱旋門 スタッフ管理",
+  "short_name": "凱旋門",
+  "description": "凱旋門スタッフ管理システム",
+  "start_url": "/gaisenmon_system/",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#c0392b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
