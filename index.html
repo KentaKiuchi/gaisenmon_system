@@ -638,18 +638,46 @@ function tab(id,btn){
   document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');
 }
 
+// ===== CACHE =====
+const LS='kaisenmon_cache_v1';
+function saveCache(){
+  try{localStorage.setItem(LS,JSON.stringify({staff,pos:POS,logs}));}catch(e){}
+}
+function loadCache(){
+  try{
+    const d=localStorage.getItem(LS);
+    if(!d)return false;
+    const j=JSON.parse(d);
+    if(j.staff&&j.staff.length){staff=j.staff;}
+    if(j.pos&&j.pos.length){POS=j.pos;}
+    if(j.logs&&j.logs.length){logs=j.logs;}
+    return true;
+  }catch(e){return false;}
+}
+
+// save()にキャッシュ更新を追加
+const _origPush = _push;
+async function _push(){
+  await _origPush();
+  saveCache();
+}
+
 // ===== INIT =====
 function refreshAll(){renderDash();renderOv();renderSkill();renderPos();populateSelects();populateSortPos();renderRecentLogs();renderHrLog();}
 
 (async()=>{
+  // 1) キャッシュで即描画
+  const cached=loadCache();
   refreshAll();
+  document.getElementById('loading').classList.add('hide');
+
+  // 2) バックグラウンドでSheetsから最新取得
   setSS('loading');
   const loaded=await loadFromSheets();
-  if(loaded)refreshAll();
-  else save(); // 初回：初期データをSheetsへ送信
-  document.getElementById('loading').classList.add('hide');
+  if(loaded){refreshAll();saveCache();}
+  else if(!cached){save();}
 })();
-<script>
+
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/gaisenmon_system/sw.js');
 }
