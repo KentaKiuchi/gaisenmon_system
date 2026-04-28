@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>凱旋門 スタッフ管理</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c0392b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="凱旋門">
 <style>
 :root{--p:#c0392b;--pd:#96281b;--ac:#e67e22;--bg:#111;--sf:#1e1e1e;--s2:#272727;--bd:#333;--tx:#f0f0f0;--mt:#888;--gn:#27ae60;--yw:#e6ac00;--rd:#e74c3c;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -644,6 +649,10 @@ function refreshAll(){renderDash();renderOv();renderSkill();renderPos();populate
   else save(); // 初回：初期データをSheetsへ送信
   document.getElementById('loading').classList.add('hide');
 })();
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/gaisenmon_system/sw.js');
+}
 </script>
 </body>
 </html>
