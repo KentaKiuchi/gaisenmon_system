@@ -842,22 +842,41 @@ function getWeekDates(offset){
   });
 }
 
-function shiftWeek(dir){shiftWeekOffset+=dir;renderShift();}
+function shiftWeek(dir){shiftWeekOffset+=dir;window._holidays=null;renderShift();}
 
-function renderShift(){
+async function renderShift(){
   const dates=getWeekDates(shiftWeekOffset);
   const dayNames=['月','火','水','木','金','土','日'];
   const label=`${dates[0].slice(5).replace('-','/')} 〜 ${dates[6].slice(5).replace('-','/')}`;
   const el=document.getElementById('shift-week-label');if(el)el.textContent=label;
   const tbl=document.getElementById('shift-table');if(!tbl)return;
-  const typeColor={L:'#0d3320',D:'#001a3a',A:'#2d1a00','-':'#1a1a1a'};
-  const typeLabel={L:'L',D:'D',A:'通','-':'休'};
-  const typeFg={L:'#4ade80',D:'#64b5f6',A:'#fb923c','-':'#555'};
+  // type廃止: 統一色
+  const typeColor={};
+  const typeLabel={};
+  const typeFg={};
+  // 祝日取得（週切替時はリセット）
+  if(!window._holidays){
+    try{
+      const y1=dates[0].slice(0,4);const y2=dates[6].slice(0,4);
+      const years=[...new Set([y1,y2])];
+      const all={};
+      await Promise.all(years.map(async y=>{
+        const r=await fetch(`https://holidays-jp.github.io/api/v1/${y}/date.json`);
+        const j=await r.json();Object.assign(all,j);
+      }));
+      window._holidays=all;
+    }catch(e){window._holidays={};}
+  }
+  const holidays=window._holidays||{};
   const todayStr=new Date().toISOString().slice(0,10);
   let html=`<thead><tr><th style="min-width:70px">名前</th>${dates.map((d,i)=>{
     const isToday=d===todayStr;
-    return `<th class="sth" style="${isToday?'color:var(--ac)':''};cursor:pointer" onclick="openDayView('${d}')" title="タップで一覧">
-      ${dayNames[i]}<br><span style="font-size:10px;font-weight:400">${d.slice(5).replace('-','/')}</span>
+    const isSat=i===5;
+    const isSunHol=i===6||!!holidays[d];
+    const col=isToday?'var(--ac)':isSunHol?'var(--rd)':isSat?'#4fc3f7':'';
+    const fw=isToday?'800':'600';
+    return `<th class="sth" style="color:${col};font-weight:${fw};cursor:pointer" onclick="openDayView('${d}')" title="タップで一覧">
+      ${dayNames[i]}${holidays[d]?' 🎌':''}<br><span style="font-size:10px;font-weight:400">${d.slice(5).replace('-','/')}</span>
     </th>`;
   }).join('')}</tr></thead><tbody>`;
   sorted().forEach(s=>{
@@ -867,11 +886,12 @@ function renderShift(){
       const t=sh?.type||'';
       const bg=typeColor[t]||'transparent';
       const fg=typeFg[t]||'var(--mt)';
-      const timeStr=(sh?.start&&sh?.end)?`<div style="font-size:9px;color:${fg};opacity:0.85;margin-top:1px;white-space:nowrap">${sh.start}~${sh.end}</div>`:'';
+      const timeStr=(sh?.start&&sh?.end)?`<div style="font-size:9px;color:${fg};opacity:0.8;margin-top:1px;white-space:nowrap">${sh.start}~${sh.end}</div>`:'';
+      const posStr=sh?.position?`<div style="font-size:9px;color:${fg};opacity:0.9;font-weight:700">${sh.position}</div>`:'';
       html+=`<td class="std" style="padding:4px 2px;min-width:72px">
         <div style="background:${bg};border-radius:5px;padding:3px 2px;cursor:pointer" onclick="openShiftEdit(${s.id},'${d}')">
           <div style="color:${fg};font-weight:700;font-size:12px">${t||'—'}</div>
-          ${timeStr}
+          ${posStr}${timeStr}
         </div>
       </td>`;
     });
@@ -887,19 +907,26 @@ function openShiftEdit(staffId,date){
   document.getElementById('se-name').textContent=`${s?.name} / ${date.slice(5).replace('-','/')}`;
   document.getElementById('se-sid').value=staffId;
   document.getElementById('se-date').value=date;
-  document.getElementById('se-type').value=sh?.type||'';
-  document.getElementById('se-start').value=sh?.start||'';
-  document.getElementById('se-end').value=sh?.end||'';
+  document.getElementById('se-position').value=sh?.position||'';
+  function _setHM(hid,mid,t){const p=(t||'').split(':');document.getElementById(hid).value=p[0]||'';document.getElementById(mid).value=p[1]||'00';}
+  _setHM('se-start-h','se-start-m',sh?.start||'');
+  _setHM('se-end-h','se-end-m',sh?.end||'');
+  _setHM('se-break-start-h','se-break-start-m',sh?.breakStart||'');
+  _setHM('se-break-end-h','se-break-end-m',sh?.breakEnd||'');
   document.getElementById('modal-shift').classList.add('open');
 }
 function saveShiftEdit(){
   const staffId=document.getElementById('se-sid').value;
   const date=document.getElementById('se-date').value;
   const type=document.getElementById('se-type').value;
-  const start=document.getElementById('se-start').value;
-  const end=document.getElementById('se-end').value;
+  const position=document.getElementById('se-position').value;
+  function _getHM(hid,mid){const h=document.getElementById(hid).value;const m=document.getElementById(mid).value;return h?`${h}:${m}`:''}
+  const start=_getHM('se-start-h','se-start-m');
+  const end=_getHM('se-end-h','se-end-m');
+  const breakStart=_getHM('se-break-start-h','se-break-start-m');
+  const breakEnd=_getHM('se-break-end-h','se-break-end-m');
   shifts=shifts.filter(x=>!(x.staffId==staffId&&x.date===date));
-  if(type)shifts.push({staffId,date,type,start,end});
+  if(start||position)shifts.push({staffId,date,start,end,position,breakStart,breakEnd});
   closeM();renderShift();save();saveCache();
 }
 function deleteShiftEdit(){
@@ -921,33 +948,26 @@ function openDayView(date){
     const s=staff.find(x=>x.id==sh.staffId);
     return {...sh, name:s?.name||'?', rank:s?.rank||''};
   }).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
-  const typeLabel={L:'ランチ',D:'ディナー',A:'通し','-':'休み'};
-  const typeBg={L:'#0d3320',D:'#001a3a',A:'#2d1a00','-':'#1a1a1a'};
-  const typeFg={L:'#4ade80',D:'#64b5f6',A:'#fb923c','-':'#555'};
+  const typeLabel={};
+  const typeBg={};
+  const typeFg={};
   if(!dayShifts.length){
     document.getElementById('dv-list').innerHTML='<div style="text-align:center;color:var(--mt);padding:20px;font-size:12px">シフト登録なし</div>';
   }else{
     document.getElementById('dv-list').innerHTML=dayShifts.map(sh=>{
-      const bg=typeBg[sh.type]||'var(--s2)';
-      const fg=typeFg[sh.type]||'var(--mt)';
-      const time=(sh.start&&sh.end)?`${sh.start}〜${sh.end}`:'時間未設定';
-      return `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:${bg};border-radius:8px;margin-bottom:6px;border:1px solid ${fg}30">
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:14px;color:${fg}">${sh.name}</div>
-          <div style="font-size:11px;color:${fg};opacity:0.8;margin-top:2px">${time}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="background:${fg}20;color:${fg};padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700">${typeLabel[sh.type]||sh.type}</span>
-          <span class="rank ${sh.rank}">${sh.rank}</span>
-        </div>
+      const bg='#1a2a1a';
+      const fg='#4ade80';
+      const time=(sh.start&&sh.end)?`${sh.start}〜${sh.end}`:sh.start?`${sh.start}〜`:'時間未設定';
+      const breakStr=sh.breakStart&&sh.breakEnd?`休憩 ${sh.breakStart}〜${sh.breakEnd}`:'';
+      const posStr=sh.position?`<span style="background:rgba(255,255,255,0.15);color:#fff;padding:2px 8px;border-radius:8px;font-size:12px;font-weight:700;margin-left:6px">${sh.position}</span>`:'';
+      return `<div style="padding:12px 14px;background:${bg};border-radius:10px;margin-bottom:8px;border:1px solid #4ade8030">
+        <div style="font-weight:700;font-size:15px;color:${fg}">${sh.name}${posStr}</div>
+        <div style="font-size:12px;color:${fg};opacity:0.8;margin-top:4px">${time}${breakStr?` / ${breakStr}`:''}</div>
       </div>`;
     }).join('');
   }
   // 今日の人数サマリー
-  const counts={L:0,D:0,A:0};
-  dayShifts.forEach(s=>{if(s.type&&s.type!=='-')counts[s.type]=(counts[s.type]||0)+1;});
-  document.getElementById('dv-summary').textContent=
-    `ランチ ${counts.L}人 / ディナー ${counts.D}人 / 通し ${counts.A}人`;
+  document.getElementById('dv-summary').textContent=`${dayShifts.length}人`;
   document.getElementById('modal-dayview').classList.add('open');
 }
 
@@ -1056,23 +1076,54 @@ if('serviceWorker' in navigator){
 
 <!-- SHIFT EDIT MODAL -->
 <div class="modal-bg" id="modal-shift">
-  <div class="mbox" style="max-width:320px">
+  <div class="mbox" style="max-width:340px">
     <div class="mttl" id="se-name">シフト編集</div>
     <input type="hidden" id="se-sid"><input type="hidden" id="se-date">
-    <div class="fg"><label>区分</label>
-      <select id="se-type">
-        <option value="">— なし —</option>
-        <option value="L">ランチ</option>
-        <option value="D">ディナー</option>
-        <option value="A">通し</option>
-        <option value="-">休み</option>
+    <div class="fg"><label>ポジション</label>
+      <select id="se-position">
+        <option value="">— 未設定 —</option>
+        <option value="HO">HO</option><option value="KO">KO</option>
+        <option value="ON">ON</option><option value="ST">ST</option>
+        <option value="IR">IR</option><option value="DS">DS</option>
+        <option value="DR">DR</option><option value="RH">RH</option>
+        <option value="DH">DH</option><option value="RDH">RDH</option>
+        <option value="SL">SL</option>
       </select>
     </div>
-    <div class="g2" style="gap:8px">
-      <div class="fg"><label>開始時間</label><input type="time" id="se-start"></div>
-      <div class="fg"><label>終了時間</label><input type="time" id="se-end"></div>
+    <div class="fg"><label>出勤時間</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="se-start-h" style="flex:1"><option value="00">0</option><option value="01">1</option><option value="02">2</option><option value="03">3</option><option value="04">4</option><option value="05">5</option><option value="06">6</option><option value="07">7</option><option value="08">8</option><option value="09">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+        <span style="color:var(--mt)">時</span>
+        <select id="se-start-m" style="flex:1"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select>
+        <span style="color:var(--mt)">分</span>
+      </div>
+    </div>
+    <div class="fg"><label>退勤時間</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="se-end-h" style="flex:1"><option value="00">0</option><option value="01">1</option><option value="02">2</option><option value="03">3</option><option value="04">4</option><option value="05">5</option><option value="06">6</option><option value="07">7</option><option value="08">8</option><option value="09">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+        <span style="color:var(--mt)">時</span>
+        <select id="se-end-m" style="flex:1"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select>
+        <span style="color:var(--mt)">分</span>
+      </div>
+    </div>
+    <div class="fg"><label>休憩 開始</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="se-break-start-h" style="flex:1"><option value="">—</option><option value="00">0</option><option value="01">1</option><option value="02">2</option><option value="03">3</option><option value="04">4</option><option value="05">5</option><option value="06">6</option><option value="07">7</option><option value="08">8</option><option value="09">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+        <span style="color:var(--mt)">時</span>
+        <select id="se-break-start-m" style="flex:1"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select>
+        <span style="color:var(--mt)">分</span>
+      </div>
+    </div>
+    <div class="fg"><label>休憩 終了</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="se-break-end-h" style="flex:1"><option value="">—</option><option value="00">0</option><option value="01">1</option><option value="02">2</option><option value="03">3</option><option value="04">4</option><option value="05">5</option><option value="06">6</option><option value="07">7</option><option value="08">8</option><option value="09">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option></select>
+        <span style="color:var(--mt)">時</span>
+        <select id="se-break-end-m" style="flex:1"><option value="00">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select>
+        <span style="color:var(--mt)">分</span>
+      </div>
     </div>
     <div class="mft">
+      <button class="btn bd2" onclick="deleteShiftEdit()" style="margin-right:auto">削除</button>
       <button class="btn bg2" onclick="closeM()">キャンセル</button>
       <button class="btn bp" onclick="saveShiftEdit()">保存</button>
     </div>
