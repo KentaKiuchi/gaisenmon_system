@@ -41,7 +41,7 @@ tr:hover td{background:var(--s2);}tr:last-child td{border-bottom:none;}
 .rank{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:700;}
 .D4{background:#3a1000;color:#ff7043;}.D3{background:#1a2a00;color:#aed581;}
 .D2{background:#001a3a;color:#64b5f6;}.D1{background:#2a002a;color:#ce93d8;}
-.K3{background:#1a1a00;color:#fff176;}.K2{background:#1a1500;color:#ffe082;}.K1{background:#0a0a1a;color:#b0bec5;}
+.K3{background:#1a1a00;color:#fff176;}.K2{background:#1a1500;color:#ffe082;}.K1{background:#0a0a1a;color:#b0bec5;}.P{background:#1a001a;color:#f48fb1;}
 .pri{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;margin:2px;}
 .p1{background:#3a1000;color:#ff8a65;border:1px solid #ff572260;}
 .p2{background:#001a10;color:#66bb6a;border:1px solid #4caf5060;}
@@ -108,6 +108,7 @@ th.sth{text-align:center;min-width:44px;}td.std{text-align:center;padding:5px 4p
   <span style="font-size:22px">🥩</span>
   <div>
     <h1>凱旋門 スタッフ管理システム</h1>
+    
   </div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
     <span id="sync-status" style="color:#888">接続中…</span>
@@ -121,6 +122,8 @@ th.sth{text-align:center;min-width:44px;}td.std{text-align:center;padding:5px 4p
   <button onclick="tab('skill',this)">📈 スキル評価</button>
   <button onclick="tab('training',this)">📋 トレーニング</button>
   <button onclick="tab('hrlog',this)">🗒 人事ログ</button>
+  <button onclick="tab('goals',this)">🎯 目標管理</button>
+  <button onclick="tab('shift',this)">📆 シフト</button>
   <button onclick="tab('criteria',this)">📐 評価基準</button>
   <button onclick="tab('notes',this)">📝 個別備考</button>
 </nav>
@@ -146,7 +149,7 @@ th.sth{text-align:center;min-width:44px;}td.std{text-align:center;padding:5px 4p
   <div class="sr">
     <input type="text" id="ov-q" placeholder="🔍 名前で検索…" style="max-width:180px" oninput="renderOv()">
     <select id="ov-rank" style="max-width:120px" onchange="renderOv()">
-      <option value="">全学年</option><option>D4</option><option>D3</option><option>D2</option><option>D1</option><option>K3</option><option>K2</option><option>K1</option>
+      <option value="">全学年</option><option>D4</option><option>D3</option><option>D2</option><option>D1</option><option>K3</option><option>K2</option><option>K1</option><option>P</option>
     </select>
     <button class="btn bp mla" onclick="openOvEdit(null)">＋ スタッフ追加</button>
   </div>
@@ -158,7 +161,7 @@ th.sth{text-align:center;min-width:44px;}td.std{text-align:center;padding:5px 4p
   <div class="sr">
     <input type="text" id="sk-q" placeholder="🔍 名前で検索…" style="max-width:180px" oninput="renderSkill()">
     <select id="sk-rank" style="max-width:120px" onchange="renderSkill()">
-      <option value="">全学年</option><option>D4</option><option>D3</option><option>D2</option><option>D1</option><option>K3</option><option>K2</option><option>K1</option>
+      <option value="">全学年</option><option>D4</option><option>D3</option><option>D2</option><option>D1</option><option>K3</option><option>K2</option><option>K1</option><option>P</option>
     </select>
     <select id="sk-sort" style="max-width:180px" onchange="renderSkill()">
       <option value="total">並び替え：総合評価</option>
@@ -193,7 +196,10 @@ th.sth{text-align:center;min-width:44px;}td.std{text-align:center;padding:5px 4p
           </select>
         </div>
       </div>
-      <div class="fg"><label>メモ</label><input type="text" id="log-m" placeholder="特記事項…"></div>
+      <div class="g2" style="gap:8px">
+        <div class="fg"><label>メモ</label><input type="text" id="log-m" placeholder="特記事項…"></div>
+        <div class="fg"><label>日付</label><input type="date" id="log-date"></div>
+      </div>
       <button class="btn bp w100" onclick="addLog()">記録する</button>
       <div id="log-list" style="margin-top:12px"></div>
     </div>
@@ -237,6 +243,57 @@ th.sth{text-align:center;min-width:44px;}td.std{text-align:center;padding:5px 4p
   </div>
 </div>
 
+<!-- GOALS -->
+<div id="tab-goals" class="tab">
+  <div class="sr">
+    <select id="goal-staff-f" style="max-width:180px" onchange="renderGoals()"><option value="">全スタッフ</option></select>
+    <button class="btn bp mla" onclick="openGoalEdit(null)">＋ 目標追加</button>
+  </div>
+  <div id="goals-list"></div>
+</div>
+
+<!-- SHIFT -->
+<div id="tab-shift" class="tab">
+  <div class="card">
+    <div class="ct">📆 シフト管理
+      <span style="font-size:11px;color:var(--mt);font-weight:400;margin-left:8px" id="shift-week-label"></span>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn bg2" style="padding:4px 10px;font-size:11px" onclick="shiftWeek(-1)">◀ 前週</button>
+        <button class="btn bg2" style="padding:4px 10px;font-size:11px" onclick="shiftWeek(1)">次週 ▶</button>
+      </div>
+    </div>
+    <div class="tw"><table id="shift-table"></table></div>
+  </div>
+</div>
+
+<!-- GOAL MODAL -->
+<div class="modal-bg" id="modal-goal">
+  <div class="mbox">
+    <div class="mttl" id="modal-goal-t">目標追加</div>
+    <input type="hidden" id="goal-id">
+    <div class="g2" style="gap:8px">
+      <div class="fg"><label>スタッフ</label><select id="goal-staff-sel"></select></div>
+      <div class="fg"><label>期限</label><input type="date" id="goal-due"></div>
+    </div>
+    <div class="fg"><label>目標ポジション</label><select id="goal-pos"></select></div>
+    <div class="fg"><label>目標スコア</label>
+      <select id="goal-score">
+        <option value="1">1（マニュアルがあれば可）</option>
+        <option value="2">2（平日1人でOK）</option>
+        <option value="3" selected>3（土日でも一人前）</option>
+        <option value="4">4（繁忙期でもOK）</option>
+        <option value="5">5（完璧・他者フォロー可）</option>
+      </select>
+    </div>
+    <div class="fg"><label>メモ</label><textarea id="goal-note" rows="2" placeholder="補足…"></textarea></div>
+    <div class="mft">
+      <button class="btn bd2" id="goal-del-btn" onclick="deleteGoal()" style="margin-right:auto;display:none">🗑 削除</button>
+      <button class="btn bg2" onclick="closeM()">キャンセル</button>
+      <button class="btn bp" onclick="saveGoal()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- NOTES -->
 <div id="tab-notes" class="tab">
   <div class="sr">
@@ -255,11 +312,25 @@ th.sth{text-align:center;min-width:44px;}td.std{text-align:center;padding:5px 4p
     <div class="g2" style="gap:8px">
       <div class="fg"><label>氏名</label><input type="text" id="ov-name" placeholder="例：山田 太郎"></div>
       <div class="fg"><label>学年</label>
-        <select id="ov-rank2"><option>D4</option><option>D3</option><option>D2</option><option>D1</option><option>K3</option><option>K2</option><option>K1</option></select>
+        <select id="ov-rank2"><option>D4</option><option>D3</option><option>D2</option><option>D1</option><option>K3</option><option>K2</option><option>K1</option><option>P</option></select>
       </div>
     </div>
     <div class="g2" style="gap:8px">
-      <div class="fg"><label>勤続年数</label><input type="text" id="ov-tenure" placeholder="例：1年3ヶ月"></div>
+      <div class="fg"><label>勤続年数</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="ov-tenure-y" style="flex:1" onchange="updTenure()">
+            <option value="0">0年</option><option value="1">1年</option><option value="2">2年</option>
+            <option value="3">3年</option><option value="4">4年</option><option value="5">5年以上</option>
+          </select>
+          <select id="ov-tenure-m" style="flex:1" onchange="updTenure()">
+            <option value="0">0ヶ月</option><option value="1">1ヶ月</option><option value="2">2ヶ月</option>
+            <option value="3">3ヶ月</option><option value="4">4ヶ月</option><option value="5">5ヶ月</option>
+            <option value="6">6ヶ月</option><option value="7">7ヶ月</option><option value="8">8ヶ月</option>
+            <option value="9">9ヶ月</option><option value="10">10ヶ月</option><option value="11">11ヶ月</option>
+          </select>
+          <input type="hidden" id="ov-tenure">
+        </div>
+      </div>
       <div class="fg"><label>総合評価（自動計算）</label><input type="text" id="ov-total-d" readonly style="color:var(--mt)"></div>
     </div>
     <div class="fg"><label>優先トレーニング（カンマ区切り、最大5項目）</label><input type="text" id="ov-pris" placeholder="例: 出し, ドリンカー, レジ"></div>
@@ -321,17 +392,20 @@ let staff=[
 ];
 
 let logs=[];
+let goals=[];
+let shifts=[];
+let shiftWeekOffset=0;
 
 // ===== UTILS =====
 const pN=()=>POS.map(p=>p.name);
-function calcTotal(sc){const v=pN().map(p=>sc[p]||0).filter(x=>x>0);return v.length?parseFloat((v.reduce((a,b)=>a+b)/v.length).toFixed(2)):0;}
+function calcTotal(sc){const v=pN().map(p=>sc[p]||0);const n=pN().length;return n?parseFloat((v.reduce((a,b)=>a+b,0)/n).toFixed(2)):0;}
 function sC(v){return v>=4?'var(--gn)':v>=3?'#8bc34a':v>=2?'var(--yw)':v>=1?'var(--ac)':'#444';}
 function tC(v){return v>=3.5?'var(--gn)':v>=2?'var(--yw)':v>=1?'var(--ac)':'var(--rd)';}
 function sCell(v){return `<span class="sc sc${v}">${v}</span>`;}
 const pcls=['p1','p2','p3','p4','p5'];
 const pnum=['①','②','③','④','⑤'];
 function priTags(pris){return pris.map((p,i)=>`<span class="pri ${pcls[i]||'p5'}">${pnum[i]}${p}</span>`).join('');}
-const rankOrder=['D4','D3','D2','D1','K3','K2','K1'];
+const rankOrder=['D4','D3','D2','D1','K3','K2','K1','P'];
 function sorted(){return [...staff].sort((a,b)=>{const d=rankOrder.indexOf(a.rank)-rankOrder.indexOf(b.rank);return d||b.total-a.total;});}
 function closeM(){document.querySelectorAll('.modal-bg').forEach(m=>m.classList.remove('open'));}
 
@@ -343,7 +417,7 @@ async function _push(){
   setSS('saving');
   try{
     await fetch(GAS,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({type:'all',data:{staff,pos:POS,logs}})});
+      body:JSON.stringify({type:'all',data:{staff,pos:POS,logs,goals,shifts}})});
     setSS('ok');
   }catch(e){setSS('error');}
 }
@@ -356,6 +430,8 @@ async function loadFromSheets(){
     if(j.staff&&j.staff.length){staff=j.staff;ok=true;}
     if(j.pos&&j.pos.length){POS=j.pos;ok=true;}
     if(j.logs&&j.logs.length){logs=j.logs;ok=true;}
+    if(j.goals&&j.goals.length){goals=j.goals;ok=true;}
+    if(j.shifts&&j.shifts.length){shifts=j.shifts;ok=true;}
     setSS(ok?'ok':'init');
     return ok;
   }catch(e){setSS('error');return false;}
@@ -392,11 +468,10 @@ function renderOv(){
   let data=sorted();
   if(q)data=data.filter(s=>s.name.includes(q));
   if(r)data=data.filter(s=>s.rank===r);
-  const rC={D4:'#ff7043',D3:'#aed581',D2:'#64b5f6',D1:'#ce93d8',K3:'#fff176',K2:'#ffe082',K1:'#b0bec5'};
+  const rC={D4:'#ff7043',D3:'#aed581',D2:'#64b5f6',D1:'#ce93d8',K3:'#fff176',K2:'#ffe082',K1:'#b0bec5',P:'#f48fb1'};
   document.getElementById('ov-grid').innerHTML=data.map(s=>{
     const rc=rC[s.rank]||'#fff';const tc=tC(s.total);
-    return `<div class="ovc">
-      <button class="btn bg2" style="position:absolute;top:10px;right:10px;padding:3px 9px;font-size:11px" onclick="openOvEdit(${s.id})">編集</button>
+    return `<div class="ovc" style="cursor:pointer" onclick="openOvEdit(${s.id})">
       <div class="flex ic gap8" style="margin-bottom:10px">
         <div style="width:38px;height:38px;border-radius:50%;background:#111;border:2px solid ${rc};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:${rc};flex-shrink:0">${s.name[0]}</div>
         <div><div style="font-size:15px;font-weight:800">${s.name}</div>
@@ -418,7 +493,13 @@ function openOvEdit(id){
   document.getElementById('ov-id').value=id||'';
   document.getElementById('ov-name').value=s?.name||'';
   document.getElementById('ov-rank2').value=s?.rank||'D1';
-  document.getElementById('ov-tenure').value=s?.tenure||'';
+  // tenure を「X年Yヶ月」からy/mに分解
+  const tenureStr=s?.tenure||'';
+  const ty=parseInt(tenureStr.match(/(\d+)年/)?.[1])||0;
+  const tm=parseInt(tenureStr.match(/(\d+)ヶ月/)?.[1])||0;
+  document.getElementById('ov-tenure-y').value=Math.min(ty,5);
+  document.getElementById('ov-tenure-m').value=Math.min(tm,11);
+  document.getElementById('ov-tenure').value=tenureStr;
   document.getElementById('ov-total-d').value=s?s.total.toFixed(2):'—';
   document.getElementById('ov-pris').value=s?.pris?.join(', ')||'';
   document.getElementById('ov-note').value=s?.note||'';
@@ -433,6 +514,16 @@ function openOvEdit(id){
 function updTotPrev(){
   const sc={};pN().forEach(p=>{sc[p]=parseInt(document.getElementById(`sc-${p}`)?.value)||0;});
   document.getElementById('ov-total-d').value=calcTotal(sc).toFixed(2);
+}
+function updTenure(){
+  const y=parseInt(document.getElementById('ov-tenure-y').value)||0;
+  const m=parseInt(document.getElementById('ov-tenure-m').value)||0;
+  let s='';
+  if(y>=5){s='5年以上';}else if(y>0&&m>0){s=`${y}年${m}ヶ月`;}
+  else if(y>0){s=`${y}年`;}
+  else if(m>0){s=`${m}ヶ月`;}
+  else{s='';}
+  document.getElementById('ov-tenure').value=s;
 }
 
 function saveOv(){
@@ -479,13 +570,13 @@ function renderSkill(){
   document.getElementById('sk-head').innerHTML=`<tr><th>名前</th><th>学年</th><th>勤続年数</th>
     <th class="sth" style="${at?'color:var(--ac)':''}">総合${at?' '+arr:''}</th>
     ${pN().map(p=>`<th class="sth" style="${ap===p?'color:var(--ac)':''}">${p}${ap===p?' '+arr:''}</th>`).join('')}</tr>`;
-  const ranks=['D4','D3','D2','D1','K3','K2','K1'];
+  const ranks=['D4','D3','D2','D1','K3','K2','K1','P'];
   const bgC=['#1a1a1a','#2d0a00','#2d1a00','#2d2600','#1a3300','#0d3320'];
   const fgC=['#555','#f87171','#fb923c','#fcd34d','#86efac','#4ade80'];
   document.getElementById('sk-body').innerHTML=data.map(s=>`<tr>
     <td style="white-space:nowrap"><strong>${s.name}</strong></td>
     <td><select class="isel" onchange="inlineUpd(${s.id},'rank',this.value)">${ranks.map(rk=>`<option${s.rank===rk?' selected':''}>${rk}</option>`).join('')}</select></td>
-    <td><input class="iinp" type="text" value="${s.tenure||''}" placeholder="例:1年" onchange="inlineUpd(${s.id},'tenure',this.value)"></td>
+    <td style="white-space:nowrap" id="tenure-cell-${s.id}"><span style="cursor:pointer;color:var(--tx);font-size:12px" onclick="openTenureEdit(${s.id})">${s.tenure||'—'}</span></td>
     <td class="std" style="${at?'background:var(--s2)':''}"><strong style="color:${tC(s.total)}">${s.total.toFixed(2)}</strong></td>
     ${pN().map(p=>`<td class="std" style="${ap===p?'background:var(--s2)':''}">
       <select class="isel ssel" onchange="inlineSc(${s.id},'${p}',this.value,this)" style="background:${bgC[s.scores[p]||0]};color:${fgC[s.scores[p]||0]}">
@@ -497,6 +588,27 @@ function renderSkill(){
 function inlineUpd(id,field,val){
   const s=staff.find(x=>x.id===id);if(!s)return;
   s[field]=val;renderDash();renderOv();populateSelects();save();
+}
+function openTenureEdit(id){
+  const s=staff.find(x=>x.id===id);if(!s)return;
+  document.getElementById('te-id').value=id;
+  document.getElementById('te-name').textContent=s.name;
+  const ty=parseInt((s.tenure||'').match(/(\d+)年/)?.[1])||0;
+  const tm=parseInt((s.tenure||'').match(/(\d+)ヶ月/)?.[1])||0;
+  document.getElementById('te-y').value=Math.min(ty,5);
+  document.getElementById('te-m').value=Math.min(tm,11);
+  document.getElementById('modal-tenure').classList.add('open');
+}
+function saveTenureEdit(){
+  const id=parseInt(document.getElementById('te-id').value);
+  const y=parseInt(document.getElementById('te-y').value)||0;
+  const m=parseInt(document.getElementById('te-m').value)||0;
+  let tenure='';
+  if(y>=5){tenure='5年以上';}else if(y>0&&m>0){tenure=`${y}年${m}ヶ月`;}
+  else if(y>0){tenure=`${y}年`;}else if(m>0){tenure=`${m}ヶ月`;}
+  const s=staff.find(x=>x.id===id);if(!s)return;
+  s.tenure=tenure;
+  closeM();renderOv();renderSkill();save();saveCache();
 }
 
 function inlineSc(id,pos,val,el){
@@ -537,8 +649,11 @@ function addLog(){
   const t=tid?staff.find(x=>x.id==tid):null;
   const icon=res==='pass'?'✅':res==='prog'?'🔄':'❌';
   const now=new Date();
+  const manualDate=document.getElementById('log-date').value;
+  const dateStr=manualDate?manualDate.replace(/-/g,'/'):`${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
+  const timeStr=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   logs.unshift({lid:Date.now(),staffId:sid,trainerId:tid||null,name:s?.name,trainer:t?.name||'—',
-    item,res,memo,icon,date:`${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`});
+    item,res,memo,icon,date:`${dateStr} ${timeStr}`});
   document.getElementById('log-m').value='';
   renderRecentLogs();renderHrLog();save();
 }
@@ -605,6 +720,12 @@ function populateSelects(){
   if(lt){const v=lt.value;lt.innerHTML='<option value="">-- 選択 --</option>'+sd.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');if(v)lt.value=v;}
   const hs=document.getElementById('hr-staff');
   if(hs){const v=hs.value;hs.innerHTML='<option value="">全スタッフ</option>'+sd.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');if(v)hs.value=v;}
+  const gf=document.getElementById('goal-staff-f');
+  if(gf){const v=gf.value;gf.innerHTML='<option value="">全スタッフ</option>'+sd.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');if(v)gf.value=v;}
+  const gs=document.getElementById('goal-staff-sel');
+  if(gs){const v=gs.value;gs.innerHTML=sd.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');if(v)gs.value=v;}
+  const gp=document.getElementById('goal-pos');
+  if(gp){const v=gp.value;gp.innerHTML=pN().map(p=>`<option>${p}</option>`).join('');if(v)gp.value=v;}
   populateLogItem();
 }
 
@@ -630,6 +751,206 @@ function renderNote(sid){
   </div>`;
 }
 
+
+// ===== GOALS =====
+function renderGoals(){
+  const sf=document.getElementById('goal-staff-f')?.value||'';
+  let data=[...goals];
+  if(sf)data=data.filter(g=>g.staffId==sf);
+  data.sort((a,b)=>a.due<b.due?-1:1);
+  const el=document.getElementById('goals-list');if(!el)return;
+  if(!data.length){el.innerHTML='<div class="card" style="text-align:center;color:var(--mt);padding:30px">目標が設定されていません</div>';return;}
+  const now=new Date().toISOString().slice(0,10);
+  el.innerHTML=data.map(g=>{
+    const s=staff.find(x=>x.id==g.staffId);
+    const cur=s?.scores?.[g.pos]||0;
+    const pct=Math.min((cur/g.targetScore)*100,100);
+    const done=cur>=g.targetScore;
+    const over=!done&&g.due<now;
+    const bc=done?'var(--gn)':over?'var(--rd)':'var(--bd)';
+    return `<div class="card" style="border-left:3px solid ${bc};margin-bottom:10px">
+      <div class="flex jb ic" style="margin-bottom:8px">
+        <div class="flex ic gap8">
+          <strong>${s?.name||'?'}</strong><span class="rank ${s?.rank||''}">${s?.rank||''}</span>
+          <span style="font-size:12px">${g.pos} → <strong style="color:${tC(g.targetScore/5*5)}">${g.targetScore}</strong></span>
+          ${done?'<span style="color:var(--gn);font-size:12px">✅ 達成！</span>':over?'<span style="color:var(--rd);font-size:12px">⚠️ 期限超過</span>':''}
+        </div>
+        <div class="flex ic gap8">
+          <span style="font-size:11px;color:var(--mt)">期限: ${g.due||'未設定'}</span>
+          <button class="btn bg2" style="padding:3px 8px;font-size:11px" onclick="openGoalEdit(${g.gid})">編集</button>
+        </div>
+      </div>
+      <div style="margin-bottom:4px;font-size:11px;color:var(--mt)">進捗: ${cur}/${g.targetScore}</div>
+      <div class="sbt" style="height:10px"><div class="sbf" style="width:${pct}%;background:${done?'var(--gn)':over?'var(--rd)':'var(--ac)'}"></div></div>
+      ${g.note?`<div style="font-size:11px;color:var(--mt);margin-top:6px">📝 ${g.note}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openGoalEdit(gid){
+  const g=gid?goals.find(x=>x.gid===gid):null;
+  document.getElementById('modal-goal-t').textContent=g?'目標を編集':'目標追加';
+  document.getElementById('goal-id').value=gid||'';
+  if(g){
+    document.getElementById('goal-staff-sel').value=g.staffId;
+    document.getElementById('goal-due').value=g.due||'';
+    document.getElementById('goal-pos').value=g.pos;
+    document.getElementById('goal-score').value=g.targetScore;
+    document.getElementById('goal-note').value=g.note||'';
+  }else{
+    const today=new Date();today.setMonth(today.getMonth()+1);
+    document.getElementById('goal-due').value=today.toISOString().slice(0,10);
+    document.getElementById('goal-note').value='';
+  }
+  document.getElementById('goal-del-btn').style.display=gid?'block':'none';
+  document.getElementById('modal-goal').classList.add('open');
+}
+
+function saveGoal(){
+  const gid=document.getElementById('goal-id').value;
+  const obj={
+    gid:gid||Date.now(),
+    staffId:document.getElementById('goal-staff-sel').value,
+    due:document.getElementById('goal-due').value,
+    pos:document.getElementById('goal-pos').value,
+    targetScore:parseInt(document.getElementById('goal-score').value),
+    note:document.getElementById('goal-note').value,
+  };
+  if(gid){const i=goals.findIndex(x=>x.gid==gid);goals[i]=obj;}
+  else{goals.push(obj);}
+  closeM();renderGoals();save();saveCache();
+}
+
+function deleteGoal(){
+  const gid=document.getElementById('goal-id').value;
+  if(!confirm('削除しますか？'))return;
+  goals=goals.filter(x=>x.gid!=gid);
+  closeM();renderGoals();save();saveCache();
+}
+
+// ===== SHIFT =====
+function getWeekDates(offset){
+  const now=new Date();
+  const day=now.getDay()||7; // 日曜=7に
+  const monday=new Date(now);
+  monday.setDate(now.getDate()-(day-1)+offset*7);
+  monday.setHours(0,0,0,0);
+  return Array.from({length:7},(_,i)=>{
+    const d=new Date(monday);d.setDate(monday.getDate()+i);
+    const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const dd=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+  });
+}
+
+function shiftWeek(dir){shiftWeekOffset+=dir;renderShift();}
+
+function renderShift(){
+  const dates=getWeekDates(shiftWeekOffset);
+  const dayNames=['月','火','水','木','金','土','日'];
+  const label=`${dates[0].slice(5).replace('-','/')} 〜 ${dates[6].slice(5).replace('-','/')}`;
+  const el=document.getElementById('shift-week-label');if(el)el.textContent=label;
+  const tbl=document.getElementById('shift-table');if(!tbl)return;
+  const typeColor={L:'#0d3320',D:'#001a3a',A:'#2d1a00','-':'#1a1a1a'};
+  const typeLabel={L:'L',D:'D',A:'通','-':'休'};
+  const typeFg={L:'#4ade80',D:'#64b5f6',A:'#fb923c','-':'#555'};
+  const todayStr=new Date().toISOString().slice(0,10);
+  let html=`<thead><tr><th style="min-width:70px">名前</th>${dates.map((d,i)=>{
+    const isToday=d===todayStr;
+    return `<th class="sth" style="${isToday?'color:var(--ac)':''};cursor:pointer" onclick="openDayView('${d}')" title="タップで一覧">
+      ${dayNames[i]}<br><span style="font-size:10px;font-weight:400">${d.slice(5).replace('-','/')}</span>
+    </th>`;
+  }).join('')}</tr></thead><tbody>`;
+  sorted().forEach(s=>{
+    html+=`<tr><td style="white-space:nowrap"><strong>${s.name}</strong></td>`;
+    dates.forEach(d=>{
+      const sh=shifts.find(x=>x.staffId==s.id&&x.date===d);
+      const t=sh?.type||'';
+      const bg=typeColor[t]||'transparent';
+      const fg=typeFg[t]||'var(--mt)';
+      const timeStr=(sh?.start&&sh?.end)?`<div style="font-size:9px;color:${fg};opacity:0.85;margin-top:1px;white-space:nowrap">${sh.start}~${sh.end}</div>`:'';
+      html+=`<td class="std" style="padding:4px 2px;min-width:72px">
+        <div style="background:${bg};border-radius:5px;padding:3px 2px;cursor:pointer" onclick="openShiftEdit(${s.id},'${d}')">
+          <div style="color:${fg};font-weight:700;font-size:12px">${t||'—'}</div>
+          ${timeStr}
+        </div>
+      </td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody>';
+  tbl.innerHTML=html;
+}
+
+function openShiftEdit(staffId,date){
+  const sh=shifts.find(x=>x.staffId==staffId&&x.date===date);
+  const s=staff.find(x=>x.id==staffId);
+  document.getElementById('se-name').textContent=`${s?.name} / ${date.slice(5).replace('-','/')}`;
+  document.getElementById('se-sid').value=staffId;
+  document.getElementById('se-date').value=date;
+  document.getElementById('se-type').value=sh?.type||'';
+  document.getElementById('se-start').value=sh?.start||'';
+  document.getElementById('se-end').value=sh?.end||'';
+  document.getElementById('modal-shift').classList.add('open');
+}
+function saveShiftEdit(){
+  const staffId=document.getElementById('se-sid').value;
+  const date=document.getElementById('se-date').value;
+  const type=document.getElementById('se-type').value;
+  const start=document.getElementById('se-start').value;
+  const end=document.getElementById('se-end').value;
+  shifts=shifts.filter(x=>!(x.staffId==staffId&&x.date===date));
+  if(type)shifts.push({staffId,date,type,start,end});
+  closeM();renderShift();save();saveCache();
+}
+function deleteShiftEdit(){
+  const staffId=document.getElementById('se-sid').value;
+  const date=document.getElementById('se-date').value;
+  shifts=shifts.filter(x=>!(x.staffId==staffId&&x.date===date));
+  closeM();renderShift();save();saveCache();
+}
+
+
+
+// ===== DAY VIEW =====
+function openDayView(date){
+  const dayNames=['日','月','火','水','木','金','土'];
+  const d=new Date(date);
+  const label=`${date.slice(5).replace('-','/')} (${dayNames[d.getDay()]})`;
+  document.getElementById('dv-title').textContent=label;
+  const dayShifts=shifts.filter(x=>x.date===date).map(sh=>{
+    const s=staff.find(x=>x.id==sh.staffId);
+    return {...sh, name:s?.name||'?', rank:s?.rank||''};
+  }).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  const typeLabel={L:'ランチ',D:'ディナー',A:'通し','-':'休み'};
+  const typeBg={L:'#0d3320',D:'#001a3a',A:'#2d1a00','-':'#1a1a1a'};
+  const typeFg={L:'#4ade80',D:'#64b5f6',A:'#fb923c','-':'#555'};
+  if(!dayShifts.length){
+    document.getElementById('dv-list').innerHTML='<div style="text-align:center;color:var(--mt);padding:20px;font-size:12px">シフト登録なし</div>';
+  }else{
+    document.getElementById('dv-list').innerHTML=dayShifts.map(sh=>{
+      const bg=typeBg[sh.type]||'var(--s2)';
+      const fg=typeFg[sh.type]||'var(--mt)';
+      const time=(sh.start&&sh.end)?`${sh.start}〜${sh.end}`:'時間未設定';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:${bg};border-radius:8px;margin-bottom:6px;border:1px solid ${fg}30">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px;color:${fg}">${sh.name}</div>
+          <div style="font-size:11px;color:${fg};opacity:0.8;margin-top:2px">${time}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="background:${fg}20;color:${fg};padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700">${typeLabel[sh.type]||sh.type}</span>
+          <span class="rank ${sh.rank}">${sh.rank}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  // 今日の人数サマリー
+  const counts={L:0,D:0,A:0};
+  dayShifts.forEach(s=>{if(s.type&&s.type!=='-')counts[s.type]=(counts[s.type]||0)+1;});
+  document.getElementById('dv-summary').textContent=
+    `ランチ ${counts.L}人 / ディナー ${counts.D}人 / 通し ${counts.A}人`;
+  document.getElementById('modal-dayview').classList.add('open');
+}
+
 // ===== TAB =====
 function tab(id,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -640,7 +961,7 @@ function tab(id,btn){
 // ===== CACHE =====
 const LS='kaisenmon_cache_v1';
 function saveCache(){
-  try{localStorage.setItem(LS,JSON.stringify({staff,pos:POS,logs}));}catch(e){}
+  try{localStorage.setItem(LS,JSON.stringify({staff,pos:POS,logs,goals,shifts}));}catch(e){}
 }
 function loadCache(){
   try{
@@ -650,6 +971,8 @@ function loadCache(){
     if(j.staff&&j.staff.length){staff=j.staff;}
     if(j.pos&&j.pos.length){POS=j.pos;}
     if(j.logs&&j.logs.length){logs=j.logs;}
+    if(j.goals&&j.goals.length){goals=j.goals;}
+    if(j.shifts&&j.shifts.length){shifts=j.shifts;}
     return true;
   }catch(e){return false;}
 }
@@ -662,7 +985,7 @@ async function _push(){
 }
 
 // ===== INIT =====
-function refreshAll(){renderDash();renderOv();renderSkill();renderPos();populateSelects();populateSortPos();renderRecentLogs();renderHrLog();}
+function refreshAll(){renderDash();renderOv();renderSkill();renderPos();populateSelects();populateSortPos();renderRecentLogs();renderHrLog();renderGoals();renderShift();}
 
 (async()=>{
   // 1) キャッシュで即描画
@@ -681,5 +1004,79 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/gaisenmon_system/sw.js');
 }
 </script>
+
+<!-- DAY SHIFT MODAL -->
+<div class="modal-bg" id="modal-day-shift">
+  <div class="mbox" style="max-width:400px">
+    <div class="mttl" id="day-shift-title"></div>
+    <div id="day-shift-list"></div>
+    <div class="mft">
+      <button class="btn bg2" onclick="closeM()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- DAY VIEW MODAL -->
+<div class="modal-bg" id="modal-dayview">
+  <div class="mbox" style="max-width:420px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="mttl" id="dv-title" style="margin-bottom:0">シフト</div>
+      <button class="btn bg2" style="padding:4px 10px;font-size:12px" onclick="closeM()">✕ 閉じる</button>
+    </div>
+    <div id="dv-summary" style="font-size:11px;color:var(--mt);margin-bottom:14px"></div>
+    <div id="dv-list"></div>
+  </div>
+</div>
+
+<!-- TENURE EDIT MODAL -->
+<div class="modal-bg" id="modal-tenure">
+  <div class="mbox" style="max-width:300px">
+    <div class="mttl"><span id="te-name"></span> の勤続年数</div>
+    <input type="hidden" id="te-id">
+    <div class="fg"><label>年数</label>
+      <select id="te-y">
+        <option value="0">0年</option><option value="1">1年</option><option value="2">2年</option>
+        <option value="3">3年</option><option value="4">4年</option><option value="5">5年以上</option>
+      </select>
+    </div>
+    <div class="fg"><label>月数</label>
+      <select id="te-m">
+        <option value="0">0ヶ月</option><option value="1">1ヶ月</option><option value="2">2ヶ月</option>
+        <option value="3">3ヶ月</option><option value="4">4ヶ月</option><option value="5">5ヶ月</option>
+        <option value="6">6ヶ月</option><option value="7">7ヶ月</option><option value="8">8ヶ月</option>
+        <option value="9">9ヶ月</option><option value="10">10ヶ月</option><option value="11">11ヶ月</option>
+      </select>
+    </div>
+    <div class="mft">
+      <button class="btn bg2" onclick="closeM()">キャンセル</button>
+      <button class="btn bp" onclick="saveTenureEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHIFT EDIT MODAL -->
+<div class="modal-bg" id="modal-shift">
+  <div class="mbox" style="max-width:320px">
+    <div class="mttl" id="se-name">シフト編集</div>
+    <input type="hidden" id="se-sid"><input type="hidden" id="se-date">
+    <div class="fg"><label>区分</label>
+      <select id="se-type">
+        <option value="">— なし —</option>
+        <option value="L">ランチ</option>
+        <option value="D">ディナー</option>
+        <option value="A">通し</option>
+        <option value="-">休み</option>
+      </select>
+    </div>
+    <div class="g2" style="gap:8px">
+      <div class="fg"><label>開始時間</label><input type="time" id="se-start"></div>
+      <div class="fg"><label>終了時間</label><input type="time" id="se-end"></div>
+    </div>
+    <div class="mft">
+      <button class="btn bg2" onclick="closeM()">キャンセル</button>
+      <button class="btn bp" onclick="saveShiftEdit()">保存</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
