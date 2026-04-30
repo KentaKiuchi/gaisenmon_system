@@ -1033,31 +1033,26 @@ function loadCache(){
   }catch(e){return false;}
 }
 
-// save()にキャッシュ更新を追加
-const _origPush = _push;
-async function _push(){
-  await _origPush();
-  saveCache();
-}
 
 // ===== INIT =====
 function refreshAll(){renderDash();renderOv();renderSkill();renderPos();populateSelects();populateSortPos();renderRecentLogs();renderHrLog();renderGoals();renderShift();}
 
 (async()=>{
-  // 1) まずキャッシュで即描画（体感速度向上）
+  // 1) キャッシュがあれば即描画（最優先）
   const cached=loadCache();
   refreshAll();
   document.getElementById('loading').classList.add('hide');
 
-  // 2) 常にGASから最新データを取得して上書き（これが正）
-  setSS('loading');
-  const loaded=await loadFromSheets();
-  if(loaded){
-    refreshAll();
-    saveCache();
-  } else if(!cached){
-    // GAS失敗かつキャッシュもない場合は初期データをGASに送信
-    save();
+  if(cached){
+    // キャッシュあり→GASにも最新を送信してから同期完了
+    setSS('ok');
+    save(); // キャッシュの内容をGASに送信
+  } else {
+    // 初回のみGASから取得
+    setSS('loading');
+    const loaded=await loadFromSheets();
+    if(loaded){refreshAll();saveCache();save();}
+    else{setSS('ok');}
   }
 })();
 
