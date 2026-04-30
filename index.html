@@ -411,17 +411,43 @@ function closeM(){document.querySelectorAll('.modal-bg').forEach(m=>m.classList.
 
 // ===== SYNC =====
 let _saveTimer=null;
-function save(){_push();}
+function save(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_push,600);}
 
-function _push(){
-  // localStorageに保存（GASへの送信はデータが大きすぎるため省略）
+async function _push(){
   saveCache();
-  setSS('ok');
+  setSS('saving');
+  try{
+    // キーごとに分割して送信（URL長制限を回避）
+    const items=[
+      ['staff', staff],
+      ['pos',   POS],
+      ['logs',  logs],
+      ['goals', goals],
+      ['shifts',shifts],
+    ];
+    await Promise.all(items.map(async ([key,val])=>{
+      const encoded=encodeURIComponent(JSON.stringify(val));
+      if(encoded.length > 7000){
+        // 大きすぎる場合はPOSTにフォールバック
+        await fetch(GAS,{
+          method:'POST',mode:'no-cors',
+          headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify({key,val})
+        });
+      } else {
+        await fetch(`${GAS}?action=save&key=${key}&val=${encoded}`,{cache:'no-store'});
+      }
+    }));
+    setSS('ok');
+  }catch(e){
+    console.warn('sync error:',e);
+    setSS('error');
+  }
 }
 
 async function loadFromSheets(){
   try{
-    const r=await fetch(GAS+'?type=all',{cache:'no-store'});
+    const r=await fetch(GAS+'?action=getall',{cache:'no-store'});
     const j=await r.json();
     let ok=false;
     if(j.staff&&j.staff.length){staff=j.staff;ok=true;}
@@ -432,8 +458,7 @@ async function loadFromSheets(){
     setSS(ok?'ok':'init');
     return ok;
   }catch(e){
-    // GAS失敗時はlocalStorageのキャッシュを使い続ける
-    setSS('⚠️ オフライン');
+    setSS('error');
     return false;
   }
 }
@@ -1008,19 +1033,20 @@ async function _push(){
 function refreshAll(){renderDash();renderOv();renderSkill();renderPos();populateSelects();populateSortPos();renderRecentLogs();renderHrLog();renderGoals();renderShift();}
 
 (async()=>{
-  // キャッシュがあればそれを優先（GASは初回のみ）
+  // 1) まずキャッシュで即描画（体感速度向上）
   const cached=loadCache();
   refreshAll();
   document.getElementById('loading').classList.add('hide');
 
-  if(!cached){
-    // 初回のみGASから初期データを取得
-    setSS('loading');
-    const loaded=await loadFromSheets();
-    if(loaded){refreshAll();saveCache();}
-    else{setSS('ok');}
-  } else {
-    setSS('ok');
+  // 2) 常にGASから最新データを取得して上書き（これが正）
+  setSS('loading');
+  const loaded=await loadFromSheets();
+  if(loaded){
+    refreshAll();
+    saveCache();
+  } else if(!cached){
+    // GAS失敗かつキャッシュもない場合は初期データをGASに送信
+    save();
   }
 })();
 
