@@ -545,14 +545,14 @@ function saveOv(){
     note:document.getElementById('ov-note').value,scores:sc,total:calcTotal(sc)};
   if(id){const i=staff.findIndex(x=>x.id==id);staff[i]={...staff[i],...obj};}
   else{staff.push({id:Date.now(),...obj});}
-  closeM();refreshAll();save();
+  closeM();refreshAll();save();saveCache();
 }
 
 function deleteS(){
   const id=document.getElementById('ov-id').value;if(!id)return;
   const s=staff.find(x=>x.id==id);
   if(!confirm(`${s?.name} を削除しますか？`))return;
-  staff=staff.filter(x=>x.id!=id);closeM();refreshAll();save();
+  staff=staff.filter(x=>x.id!=id);closeM();refreshAll();save();saveCache();
 }
 
 // ===== SKILL =====
@@ -596,7 +596,7 @@ function renderSkill(){
 
 function inlineUpd(id,field,val){
   const s=staff.find(x=>x.id===id);if(!s)return;
-  s[field]=val;renderDash();renderOv();populateSelects();save();
+  s[field]=val;renderDash();renderOv();populateSelects();save();saveCache();
 }
 function openTenureEdit(id){
   const s=staff.find(x=>x.id===id);if(!s)return;
@@ -633,7 +633,7 @@ function inlineSc(id,pos,val,el){
       const tds=[...tr.querySelectorAll('td')];if(tds[3])tds[3].innerHTML=`<strong style="color:${tC(s.total)}">${s.total.toFixed(2)}</strong>`;break;
     }
   }
-  renderDash();renderOv();save();
+  renderDash();renderOv();save();saveCache();
 }
 
 // ===== TRAINING =====
