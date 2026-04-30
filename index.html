@@ -425,17 +425,19 @@ async function _push(){
   saveCache();
   setSS('saving');
   try{
-    const r=await fetch(GAS,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        key:'all',
-        val:{staff,pos:POS,logs,goals,shifts}
-      })
-    });
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json();
-    setSS(j.ok?'ok':'error');
+    // staffは1人ずつ保存（URL長制限対策）
+    for(const s of staff){
+      const encoded=encodeURIComponent(JSON.stringify(s));
+      await fetch(`${GAS}?action=save&key=staff_${s.id}&val=${encoded}`,{cache:'no-store'});
+    }
+    // スタッフIDリストを保存（読み込み時に使う）
+    await fetch(`${GAS}?action=save&key=staff_ids&val=${encodeURIComponent(JSON.stringify(staff.map(s=>s.id)))}`,{cache:'no-store'});
+    // その他は小さいのでそのまま
+    for(const [key,val] of [['pos',POS],['logs',logs],['goals',goals],['shifts',shifts]]){
+      const encoded=encodeURIComponent(JSON.stringify(val));
+      await fetch(`${GAS}?action=save&key=${key}&val=${encoded}`,{cache:'no-store'});
+    }
+    setSS('ok');
   }catch(e){
     console.warn('sync error:',e.message);
     setSS('error');
@@ -445,15 +447,25 @@ async function _push(){
 
 async function loadFromSheets(){
   try{
-    const r=await fetch(GAS+'?action=getall',{cache:'no-store'});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json();
+    // staff_idsを取得してから1人ずつ読み込む
+    const idsR=await fetch(`${GAS}?action=getkey&key=staff_ids`,{cache:'no-store'});
+    const idsJ=await idsR.json();
     let ok=false;
-    if(j.staff&&j.staff.length){staff=j.staff;ok=true;}
-    if(j.pos&&j.pos.length){POS=j.pos;ok=true;}
-    if(j.logs&&j.logs.length){logs=j.logs;ok=true;}
-    if(j.goals&&j.goals.length){goals=j.goals;ok=true;}
-    if(j.shifts&&j.shifts.length){shifts=j.shifts;ok=true;}
+    if(Array.isArray(idsJ)&&idsJ.length){
+      const members=await Promise.all(idsJ.map(async id=>{
+        const r=await fetch(`${GAS}?action=getkey&key=staff_${id}`,{cache:'no-store'});
+        return r.json();
+      }));
+      const valid=members.filter(s=>s&&s.id);
+      if(valid.length){staff=valid;ok=true;}
+    }
+    // その他
+    const rest=await fetch(`${GAS}?action=getmeta`,{cache:'no-store'});
+    const meta=await rest.json();
+    if(meta.pos&&meta.pos.length){POS=meta.pos;ok=true;}
+    if(meta.logs&&meta.logs.length){logs=meta.logs;ok=true;}
+    if(meta.goals&&meta.goals.length){goals=meta.goals;ok=true;}
+    if(meta.shifts&&meta.shifts.length){shifts=meta.shifts;ok=true;}
     setSS(ok?'ok':'init');
     return ok;
   }catch(e){
