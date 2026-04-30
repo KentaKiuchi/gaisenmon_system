@@ -411,24 +411,12 @@ function closeM(){document.querySelectorAll('.modal-bg').forEach(m=>m.classList.
 
 // ===== SYNC =====
 let _saveTimer=null;
-function save(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_push,400);}
+function save(){_push();}
 
-async function _push(){
-  setSS('saving');
-  saveCache(); // まずlocalStorageに確実保存
-  try{
-    // GETリクエストでデータ送信（CORSを回避）
-    const payload=encodeURIComponent(JSON.stringify({
-      staff,pos:POS,logs,goals,shifts
-    }));
-    const url=`${GAS}?action=save&data=${payload}`;
-    const r=await fetch(url,{cache:'no-store'});
-    const j=await r.json();
-    setSS(j.ok?'ok':'error');
-  }catch(e){
-    console.warn('GAS save error:',e);
-    setSS('error');
-  }
+function _push(){
+  // localStorageに保存（GASへの送信はデータが大きすぎるため省略）
+  saveCache();
+  setSS('ok');
 }
 
 async function loadFromSheets(){
@@ -1020,16 +1008,20 @@ async function _push(){
 function refreshAll(){renderDash();renderOv();renderSkill();renderPos();populateSelects();populateSortPos();renderRecentLogs();renderHrLog();renderGoals();renderShift();}
 
 (async()=>{
-  // 1) キャッシュで即描画
+  // キャッシュがあればそれを優先（GASは初回のみ）
   const cached=loadCache();
   refreshAll();
   document.getElementById('loading').classList.add('hide');
 
-  // 2) バックグラウンドでSheetsから最新取得
-  setSS('loading');
-  const loaded=await loadFromSheets();
-  if(loaded){refreshAll();saveCache();}
-  else if(!cached){save();}
+  if(!cached){
+    // 初回のみGASから初期データを取得
+    setSS('loading');
+    const loaded=await loadFromSheets();
+    if(loaded){refreshAll();saveCache();}
+    else{setSS('ok');}
+  } else {
+    setSS('ok');
+  }
 })();
 
 if('serviceWorker' in navigator){
