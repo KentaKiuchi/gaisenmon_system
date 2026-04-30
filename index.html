@@ -425,53 +425,31 @@ async function _push(){
   saveCache();
   setSS('saving');
   try{
-    const items=[
-      ['staff',staff],['pos',POS],['logs',logs],['goals',goals],['shifts',shifts]
-    ];
-    for(const [key,val] of items){
-      const str=JSON.stringify(val);
-      if(str.length<=4000){
-        await gasGet({action:'save',key,val:str});
-      } else {
-        // 4KB超はチャンク分割
-        const arr=Array.isArray(val)?val:[val];
-        const size=Math.ceil(arr.length/Math.ceil(str.length/3500));
-        const chunks=[];
-        for(let i=0;i<arr.length;i+=size)chunks.push(arr.slice(i,i+size));
-        for(let i=0;i<chunks.length;i++){
-          await gasGet({action:'save',key:`${key}__${i}`,val:JSON.stringify(chunks[i])});
-        }
-        await gasGet({action:'save',key:`${key}__n`,val:String(chunks.length)});
-      }
-    }
-    setSS('ok');
+    const r=await fetch(GAS,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        key:'all',
+        val:{staff,pos:POS,logs,goals,shifts}
+      })
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    setSS(j.ok?'ok':'error');
   }catch(e){
     console.warn('sync error:',e.message);
     setSS('error');
   }
 }
 
+
 async function loadFromSheets(){
   try{
-    const j=await gasGet({action:'getall'});
+    const r=await fetch(GAS+'?action=getall',{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();
     let ok=false;
-    // チャンク結合
-    async function loadMerged(key,fallback){
-      const meta=j[key+'__n'];
-      if(meta!==undefined){
-        const n=parseInt(meta)||0;
-        let merged=[];
-        for(let i=0;i<n;i++){
-          const k=key+'__'+i;
-          const chunk=j[k]||[];
-          merged=merged.concat(Array.isArray(chunk)?chunk:[chunk]);
-        }
-        return merged.length?merged:fallback;
-      }
-      return j[key]||fallback;
-    }
-    const s=j.staff&&j.staff.length?j.staff:null;
-    if(s){staff=s;ok=true;}
+    if(j.staff&&j.staff.length){staff=j.staff;ok=true;}
     if(j.pos&&j.pos.length){POS=j.pos;ok=true;}
     if(j.logs&&j.logs.length){logs=j.logs;ok=true;}
     if(j.goals&&j.goals.length){goals=j.goals;ok=true;}
