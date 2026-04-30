@@ -347,7 +347,7 @@ th.sth{text-align:center;min-width:44px;}td.std{text-align:center;padding:5px 4p
 </div>
 
 <script>
-const GAS='https://script.google.com/macros/s/AKfycbyVsx3bFeUU5r-F4ASE7tWK-WS2qqRHmAwnSUpkyD_w80FDiWZbUm4ePIcP5qkbQkc/exec';
+const GAS='https://gaisenmon-proxy.s2422010.workers.dev';
 let _st=null;
 
 // ===== DATA =====
@@ -413,10 +413,10 @@ function closeM(){document.querySelectorAll('.modal-bg').forEach(m=>m.classList.
 let _saveTimer=null;
 function save(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_push,600);}
 
-// GASとの通信
+// Cloudflare Worker経由でGASと通信
 async function gasGet(params){
   const url=GAS+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
-  const r=await fetch(url,{cache:'no-store',redirect:'follow'});
+  const r=await fetch(url,{cache:'no-store'});
   if(!r.ok)throw new Error('HTTP '+r.status);
   return r.json();
 }
