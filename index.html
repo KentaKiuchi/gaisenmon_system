@@ -413,31 +413,53 @@ function closeM(){document.querySelectorAll('.modal-bg').forEach(m=>m.classList.
 let _saveTimer=null;
 function save(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_push,600);}
 
+// JSONPでGASと通信（CORSを完全回避）
+function jsonp(url){
+  return new Promise((resolve,reject)=>{
+    const cb='_cb'+Date.now();
+    const s=document.createElement('script');
+    const t=setTimeout(()=>{cleanup();reject(new Error('timeout'));},8000);
+    function cleanup(){delete window[cb];s.remove();clearTimeout(t);}
+    window[cb]=(d)=>{cleanup();resolve(d);};
+    s.src=url+(url.includes('?')?'&':'?')+'cb='+cb;
+    s.onerror=()=>{cleanup();reject(new Error('script error'));};
+    document.head.appendChild(s);
+  });
+}
+
 async function _push(){
   saveCache();
   setSS('saving');
   try{
-    // キーごとに分割して送信（URL長制限を回避）
     const items=[
-      ['staff', staff],
-      ['pos',   POS],
-      ['logs',  logs],
-      ['goals', goals],
-      ['shifts',shifts],
+      ['staff',staff],['pos',POS],['logs',logs],['goals',goals],['shifts',shifts]
     ];
-    await Promise.all(items.map(async ([key,val])=>{
+    for(const [key,val] of items){
       const encoded=encodeURIComponent(JSON.stringify(val));
-      if(encoded.length > 7000){
-        // 大きすぎる場合はPOSTにフォールバック
-        await fetch(GAS,{
-          method:'POST',mode:'no-cors',
-          headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({key,val})
-        });
+      if(encoded.length<=6000){
+        await jsonp(`${GAS}?action=save&key=${key}&val=${encoded}`);
       } else {
-        await fetch(`${GAS}?action=save&key=${key}&val=${encoded}`,{cache:'no-store'});
+        // staffのような大きいデータはスタッフごとに分割
+        // まずキー全体をそのまま試みる（GAS側でURL長制限があるため分割）
+        const chunks=[];
+        const arr=Array.isArray(val)?val:[val];
+        let chunk=[];
+        for(const item of arr){
+          chunk.push(item);
+          if(encodeURIComponent(JSON.stringify(chunk)).length>5000){
+            chunks.push(chunk.slice(0,-1));
+            chunk=[item];
+          }
+        }
+        if(chunk.length)chunks.push(chunk);
+        for(let i=0;i<chunks.length;i++){
+          const chunkKey=`${key}_${i}`;
+          await jsonp(`${GAS}?action=save&key=${chunkKey}&val=${encodeURIComponent(JSON.stringify({chunk:chunks[i],total:chunks.length,index:i}))}`);
+        }
+        // チャンク数を記録
+        await jsonp(`${GAS}?action=save&key=${key}_meta&val=${encodeURIComponent(JSON.stringify({chunks:chunks.length}))}`);
       }
-    }));
+    }
     setSS('ok');
   }catch(e){
     console.warn('sync error:',e);
@@ -447,8 +469,7 @@ async function _push(){
 
 async function loadFromSheets(){
   try{
-    const r=await fetch(GAS+'?action=getall',{cache:'no-store'});
-    const j=await r.json();
+    const j=await jsonp(`${GAS}?action=getall`);
     let ok=false;
     if(j.staff&&j.staff.length){staff=j.staff;ok=true;}
     if(j.pos&&j.pos.length){POS=j.pos;ok=true;}
@@ -458,6 +479,7 @@ async function loadFromSheets(){
     setSS(ok?'ok':'init');
     return ok;
   }catch(e){
+    console.warn('load error:',e);
     setSS('error');
     return false;
   }
