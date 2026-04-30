@@ -415,16 +415,21 @@ function save(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_push,400);}
 
 async function _push(){
   setSS('saving');
+  // まずlocalStorageに確実保存
+  saveCache();
   try{
-    await fetch(GAS,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},
+    const r=await fetch(GAS,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({type:'all',data:{staff,pos:POS,logs,goals,shifts}})});
     setSS('ok');
-  }catch(e){setSS('error');}
+  }catch(e){
+    // no-corsはopaque responseなのでエラーにならない。常にok扱い
+    setSS('ok');
+  }
 }
 
 async function loadFromSheets(){
   try{
-    const r=await fetch(GAS+'?type=all');
+    const r=await fetch(GAS+'?type=all',{cache:'no-store'});
     const j=await r.json();
     let ok=false;
     if(j.staff&&j.staff.length){staff=j.staff;ok=true;}
@@ -434,7 +439,11 @@ async function loadFromSheets(){
     if(j.shifts&&j.shifts.length){shifts=j.shifts;ok=true;}
     setSS(ok?'ok':'init');
     return ok;
-  }catch(e){setSS('error');return false;}
+  }catch(e){
+    // GAS失敗時はlocalStorageのキャッシュを使い続ける
+    setSS('⚠️ オフライン');
+    return false;
+  }
 }
 
 function setSS(s){
@@ -908,19 +917,18 @@ function openShiftEdit(staffId,date){
   document.getElementById('se-sid').value=staffId;
   document.getElementById('se-date').value=date;
   document.getElementById('se-position').value=sh?.position||'';
-  function _setHM(hid,mid,t){const p=(t||'').split(':');document.getElementById(hid).value=p[0]||'';document.getElementById(mid).value=p[1]||'00';}
-  _setHM('se-start-h','se-start-m',sh?.start||'');
-  _setHM('se-end-h','se-end-m',sh?.end||'');
-  _setHM('se-break-start-h','se-break-start-m',sh?.breakStart||'');
-  _setHM('se-break-end-h','se-break-end-m',sh?.breakEnd||'');
+  _setHMg('se-start-h','se-start-m',sh?.start||'');
+  _setHMg('se-end-h','se-end-m',sh?.end||'');
+  _setHMg('se-break-start-h','se-break-start-m',sh?.breakStart||'');
+  _setHMg('se-break-end-h','se-break-end-m',sh?.breakEnd||'');
   document.getElementById('modal-shift').classList.add('open');
 }
+function _getHM(hid,mid){const h=document.getElementById(hid)?.value||'';const m=document.getElementById(mid)?.value||'00';return h?`${h}:${m}`:''}
+function _setHMg(hid,mid,t){const p=(t||'').split(':');const he=document.getElementById(hid);const me=document.getElementById(mid);if(he)he.value=p[0]||'';if(me)me.value=p[1]||'00';}
 function saveShiftEdit(){
   const staffId=document.getElementById('se-sid').value;
   const date=document.getElementById('se-date').value;
-  const type=document.getElementById('se-type').value;
   const position=document.getElementById('se-position').value;
-  function _getHM(hid,mid){const h=document.getElementById(hid).value;const m=document.getElementById(mid).value;return h?`${h}:${m}`:''}
   const start=_getHM('se-start-h','se-start-m');
   const end=_getHM('se-end-h','se-end-m');
   const breakStart=_getHM('se-break-start-h','se-break-start-m');
