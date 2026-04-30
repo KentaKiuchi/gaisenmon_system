@@ -415,15 +415,19 @@ function save(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_push,400);}
 
 async function _push(){
   setSS('saving');
-  // まずlocalStorageに確実保存
-  saveCache();
+  saveCache(); // まずlocalStorageに確実保存
   try{
-    const r=await fetch(GAS,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({type:'all',data:{staff,pos:POS,logs,goals,shifts}})});
-    setSS('ok');
+    // GETリクエストでデータ送信（CORSを回避）
+    const payload=encodeURIComponent(JSON.stringify({
+      staff,pos:POS,logs,goals,shifts
+    }));
+    const url=`${GAS}?action=save&data=${payload}`;
+    const r=await fetch(url,{cache:'no-store'});
+    const j=await r.json();
+    setSS(j.ok?'ok':'error');
   }catch(e){
-    // no-corsはopaque responseなのでエラーにならない。常にok扱い
-    setSS('ok');
+    console.warn('GAS save error:',e);
+    setSS('error');
   }
 }
 
