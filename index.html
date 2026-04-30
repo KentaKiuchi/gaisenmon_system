@@ -409,10 +409,6 @@ const rankOrder=['D4','D3','D2','D1','K3','K2','K1','P'];
 function sorted(){return [...staff].sort((a,b)=>{const d=rankOrder.indexOf(a.rank)-rankOrder.indexOf(b.rank);return d||b.total-a.total;});}
 function closeM(){document.querySelectorAll('.modal-bg').forEach(m=>m.classList.remove('open'));}
 
-// ===== SYNC =====
-let _saveTimer=null;
-function save(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_push,600);}
-
 // Cloudflare Worker経由でGASと通信
 async function gasGet(params){
   const url=GAS+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
@@ -420,6 +416,9 @@ async function gasGet(params){
   if(!r.ok)throw new Error('HTTP '+r.status);
   return r.json();
 }
+
+let _saveTimer=null;
+function save(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_push,600);}
 
 async function _push(){
   saveCache();
